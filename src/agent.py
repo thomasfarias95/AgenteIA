@@ -62,13 +62,13 @@ def executar_agente(
         for tentativa in range(1, max_tentativas + 1):
             try:
                 response = client.models.generate_content(
-                    model="gemini-2.0-flash",
-                    contents=prompt_usuario,
-                    config={
-                        "system_instruction": system_prompt_formatado,
-                        "temperature": 0.2,
-                    }
-                )
+    model="gemini-3.6-flash",
+    contents=prompt_usuario,
+    config={
+        "system_instruction": system_prompt_formatado,
+        "temperature": 0.2,
+    }
+)
                 return response.text
 
             except errors.APIError as api_err:
