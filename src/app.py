@@ -48,6 +48,15 @@ st.set_page_config(
 st.title("💡 FinAssist - Seu Assistente Financeiro")
 st.caption("Consultoria personalizada com Inteligência Artificial e segurança de dados.")
 
+# Inicialização dos estados na Session State
+if "messages" not in st.session_state:
+    st.session_state.messages = [
+        {"role": "assistant", "content": "Olá! Seja muito bem-vindo ao FinAssist. Como você se chama e como posso te ajudar hoje?"}
+    ]
+
+if "exibir_grafico" not in st.session_state:
+    st.session_state.exibir_grafico = False
+
 # Barra Lateral (Sidebar) para Parâmetros Financeiros
 with st.sidebar:
     st.header("⚙️ Dados do Investimento")
@@ -99,44 +108,18 @@ with st.sidebar:
         st.session_state.messages = [
             {"role": "assistant", "content": "Olá! Seja muito bem-vindo ao FinAssist. Como você se chama e como posso te ajudar hoje?"}
         ]
+        st.session_state.exibir_grafico = False
         st.rerun()
-
-# Inicialização do Histórico de Mensagens no State
-if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {"role": "assistant", "content": "Olá! Seja muito bem-vindo ao FinAssist. Como você se chama e como posso te ajudar hoje?"}
-    ]
 
 # Exibição do Histórico do Chat
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# Renderiza o Gráfico de Projeção na tela se houver prazo e valor definidos
-if prazo > 0 and (valor > 0 or aporte_mensal > 0):
-    st.markdown("---")
-    st.subheader("📈 Projeção do Crescimento Patrimonial")
-    
-    df_chart = calcular_projecao(valor, aporte_mensal, taxa_anual, prazo)
-    
-    # Exibe o gráfico de linhas interativo
-    st.line_chart(
-        df_chart, 
-        x="Mês", 
-        y=["Total Investido (R$)", "Saldo Estimado (R$)"],
-        color=["#888888", "#29B6F6"]
-    )
-    
-    # Aviso Legal de oscilação das taxas
-    st.caption(
-        "⚠️ **Observação:** Esta simulação considera a taxa de juros atual informada "
-        f"({taxa_anual:.2f}% a.a.). As taxas de mercado oscilam ao longo do tempo "
-        "(podendo subir ou cair), portanto os valores finais reais podem variar."
-    )
-    st.markdown("---")
-
 # Processamento quando o usuário clica no botão da Sidebar
 if btn_enviar_dados:
+    st.session_state.exibir_grafico = True  # Ativa a exibição do gráfico
+    
     prompt_simulado = (
         f"Gostaria de uma recomendação para o meu perfil {perfil}, com prazo de {prazo} meses, "
         f"aporte inicial de R$ {valor:,.2f} e aportes mensais de R$ {aporte_mensal:,.2f}."
@@ -177,3 +160,26 @@ elif user_prompt := st.chat_input("Digite sua mensagem..."):
             st.markdown(resposta_agente)
             
     st.session_state.messages.append({"role": "assistant", "content": resposta_agente})
+
+# Renderiza o Gráfico APENAS se o botão de enviar dados tiver sido clicado
+if st.session_state.exibir_grafico and prazo > 0 and (valor > 0 or aporte_mensal > 0):
+    st.markdown("---")
+    st.subheader("📈 Projeção do Crescimento Patrimonial")
+    
+    df_chart = calcular_projecao(valor, aporte_mensal, taxa_anual, prazo)
+    
+    # Exibe o gráfico de linhas interativo
+    st.line_chart(
+        df_chart, 
+        x="Mês", 
+        y=["Total Investido (R$)", "Saldo Estimado (R$)"],
+        color=["#888888", "#29B6F6"]
+    )
+    
+    # Aviso Legal
+    st.caption(
+        "⚠️ **Observação:** Esta simulação considera a taxa de juros atual informada "
+        f"({taxa_anual:.2f}% a.a.). As taxas de mercado oscilam ao longo do tempo "
+        "(podendo subir ou cair), portanto os valores finais reais podem variar."
+    )
+    st.markdown("---")
