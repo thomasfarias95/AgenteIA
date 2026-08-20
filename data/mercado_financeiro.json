@@ -1,0 +1,80 @@
+{
+  "metadados": {
+    "versao_base": "1.0",
+    "fonte_dados": "Mercado Financeiro / B3",
+    "descricao": "Base de conhecimento estática de ativos e regras de alocação."
+  },
+  "indicadores_mercado": {
+    "taxa_selic_a_a": "10.50%",
+    "taxa_cdi_a_a": "10.40%",
+    "ipca_12_meses": "4.00%"
+  },
+  "produtos_investimento": [
+    {
+      "id": "cdi_diario",
+      "nome": "CDB Liquidez Diária (100% CDI)",
+      "categoria": "Renda Fixa",
+      "perfil_indicado": ["Conservador", "Moderado", "Arrojado"],
+      "prazo_minimo_meses": 0,
+      "liquidez": "Diária (D+0)",
+      "risco": "Baixo (Garantido pelo FGC)",
+      "rentabilidade_estimada": "100% do CDI",
+      "indicado_para": "Reserva de emergência, caixa ou proteção de curto prazo."
+    },
+    {
+      "id": "tesouro_selic",
+      "nome": "Tesouro Selic",
+      "categoria": "Renda Fixa",
+      "perfil_indicado": ["Conservador", "Moderado", "Arrojado"],
+      "prazo_minimo_meses": 0,
+      "liquidez": "Diária (D+1)",
+      "risco": "Muito Baixo (Risco Soberano)",
+      "rentabilidade_estimada": "Taxa Selic",
+      "indicado_para": "Reserva de liquidez com segurança máxima."
+    },
+    {
+      "id": "lci_lca_1ano",
+      "nome": "LCI / LCA 90% a 95% do CDI",
+      "categoria": "Renda Fixa Isenta",
+      "perfil_indicado": ["Conservador", "Moderado", "Arrojado"],
+      "prazo_minimo_meses": 12,
+      "liquidez": "No vencimento (9 a 12 meses)",
+      "risco": "Baixo (Garantido pelo FGC)",
+      "rentabilidade_estimada": "90% a 95% do CDI (Isento de IR)",
+      "indicado_para": "Médio prazo sem necessidade de resgate imediato."
+    },
+    {
+      "id": "tesouro_ipca",
+      "nome": "Tesouro IPCA+",
+      "categoria": "Renda Fixa Inflação",
+      "perfil_indicado": ["Moderado", "Arrojado"],
+      "prazo_minimo_meses": 36,
+      "liquidez": "No vencimento (sujeito à marcação a mercado se resgatado antes)",
+      "risco": "Médio",
+      "rentabilidade_estimada": "IPCA + Taxa Fixa",
+      "indicado_para": "Proteção do poder de compra no médio/longo prazo."
+    },
+    {
+      "id": "fii_papel_tijolo",
+      "nome": "Fundos Imobiliários (FIIs)",
+      "categoria": "Renda Variável",
+      "perfil_indicado": ["Moderado", "Arrojado"],
+      "prazo_minimo_meses": 12,
+      "liquidez": "Diária via Bolsa (D+2)",
+      "risco": "Médio / Alto",
+      "rentabilidade_estimada": "Rendimentos mensais isentos",
+      "indicado_para": "Geração de renda recorrente e diversificação."
+    },
+    {
+      "id": "etf_bova11",
+      "nome": "ETF de Ações (Ex: BOVA11)",
+      "categoria": "Renda Variável",
+      "perfil_indicado": ["Arrojado"],
+      "prazo_minimo_meses": 36,
+      "liquidez": "Diária via Bolsa (D+2)",
+      "risco": "Alto",
+      "rentabilidade_estimada": "Oscilação com base no índice Ibovespa",
+      "indicado_para": "Crescimento de patrimônio no longo prazo."
+    }
+  ]
+}
