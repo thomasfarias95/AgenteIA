@@ -1,55 +1,68 @@
-import json
+"""
+Módulo do Agente Inteligente FinAssist.
+Gerencia a carga de dados, resolução de caminhos dinâmicos e comunicação com Gemini.
+"""
+
 import os
+import json
+from pathlib import Path
 from google import genai
 from src.prompts import SYSTEM_PROMPT, montar_prompt_usuario
 
-def obter_caminho_base_conhecimento() -> str:
-    """Busca o arquivo JSON testando os locais mais comuns da estrutura."""
-    diretorio_atual = os.path.dirname(os.path.abspath(__file__))
-    raiz_projeto = os.path.abspath(os.path.join(diretorio_atual, ".."))
-    
-    # Lista de locais possíveis para tentar encontrar o JSON
-    caminhos_possiveis = [
-        os.path.join(raiz_projeto, "data", "mercado_financeiro.json"),
-        os.path.join(diretorio_atual, "data", "mercado_financeiro.json"),
-        os.path.join(diretorio_atual, "mercado_financeiro.json"),
-        os.path.join(raiz_projeto, "mercado_financeiro.json")
-    ]
-    
-    for caminho in caminhos_possiveis:
-        if os.path.exists(caminho):
-            return caminho
-            
-    return caminhos_possiveis[0] # Retorna o padrão caso nenhum exista
-
 def carregar_base_conhecimento() -> str:
-    caminho_json = obter_caminho_base_conhecimento()
-    try:
-        if not os.path.exists(caminho_json):
-            return f"Erro: O arquivo de base de conhecimento não foi localizado em '{caminho_json}'."
-            
-        with open(caminho_json, "r", encoding="utf-8") as f:
-            dados = json.load(f)
-            return json.dumps(dados, ensure_ascii=False, indent=2)
-    except Exception as e:
-        return f"Erro ao carregar base de conhecimento: {e}"
-
-def gerar_recomendacao(perfil: str, prazo_meses: int, valor: float, duvida: str = "") -> str:
-    base_conhecimento = carregar_base_conhecimento()
+    """
+    Carrega o arquivo JSON da base de conhecimento usando caminhos relativos robustos.
+    """
+    diretorio_atual = Path(__file__).parent.resolve()
+    caminho_json = diretorio_atual.parent / "data" / "mercado_financeiro.json"
     
-    if "Erro" in base_conhecimento:
-        return base_conhecimento
+    if not caminho_json.exists():
+        raise FileNotFoundError(f"Base de conhecimento não encontrada em: {caminho_json}")
+        
+    with open(caminho_json, "r", encoding="utf-8") as f:
+        dados = json.load(f)
+        
+    return json.dumps(dados, ensure_ascii=False, indent=2)
 
-    system_instruction = SYSTEM_PROMPT.format(contexto_base_conhecimento=base_conhecimento)
-    user_prompt = montar_prompt_usuario(perfil, prazo_meses, valor, duvida)
-    
+def executar_agente(
+    perfil: str = "", 
+    prazo_meses: int = 0, 
+    valor: float = 0.0, 
+    mensagem_usuario: str = ""
+) -> str:
+    """
+    Executa a chamada ao modelo Gemini aplicando o RAG estático e guardrails.
+    """
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return "Erro de Configuração: A variável de ambiente GEMINI_API_KEY não foi encontrada."
+
     try:
-        client = genai.Client()
+        base_conhecimento = carregar_base_conhecimento()
+        
+        system_prompt_formatado = SYSTEM_PROMPT.format(
+            contexto_base_conhecimento=base_conhecimento
+        )
+        
+        prompt_usuario = montar_prompt_usuario(
+            perfil=perfil,
+            prazo_meses=prazo_meses,
+            valor=valor,
+            mensagem_usuario=mensagem_usuario
+        )
+        
+        client = genai.Client(api_key=api_key)
+        
         response = client.models.generate_content(
             model="gemini-3.6-flash",
-            contents=user_prompt,
-            config={"system_instruction": system_instruction}
+            contents=prompt_usuario,
+            config={
+                "system_instruction": system_prompt_formatado,
+                "temperature": 0.2,
+            }
         )
+        
         return response.text
+
     except Exception as e:
-        return f"Erro ao consultar o agente virtual: {e}\n(Certifique-se de que a variável GEMINI_API_KEY está configurada)."
+        return f"Ocorreu um erro ao processar sua solicitação: {str(e)}"
