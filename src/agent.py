@@ -5,8 +5,10 @@ Gerencia a carga de dados, resolução de caminhos dinâmicos e comunicação co
 
 import os
 import json
+import time
 from pathlib import Path
 from google import genai
+from google.genai import errors
 from src.prompts import SYSTEM_PROMPT, montar_prompt_usuario
 
 def carregar_base_conhecimento() -> str:
@@ -31,7 +33,7 @@ def executar_agente(
     mensagem_usuario: str = ""
 ) -> str:
     """
-    Executa a chamada ao modelo Gemini aplicando o RAG estático e guardrails.
+    Executa a chamada ao modelo Gemini aplicando o RAG estático, guardrails e retry para 503.
     """
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
@@ -53,16 +55,34 @@ def executar_agente(
         
         client = genai.Client(api_key=api_key)
         
-        response = client.models.generate_content(
-            model="gemini-3.6-flash",
-            contents=prompt_usuario,
-            config={
-                "system_instruction": system_prompt_formatado,
-                "temperature": 0.2,
-            }
-        )
-        
-        return response.text
+        # Tentativas de reconexão em caso de sobrecarga (503 / 429)
+        max_tentativas = 3
+        tempo_espera = 2  # segundos
+
+        for tentativa in range(1, max_tentativas + 1):
+            try:
+                response = client.models.generate_content(
+                    model="gemini-2.0-flash",
+                    contents=prompt_usuario,
+                    config={
+                        "system_instruction": system_prompt_formatado,
+                        "temperature": 0.2,
+                    }
+                )
+                return response.text
+
+            except errors.APIError as api_err:
+                # Trata instabilidade temporária do servidor ou limite de requisições
+                if api_err.code in (503, 429) and tentativa < max_tentativas:
+                    time.sleep(tempo_espera)
+                    tempo_espera *= 2  # Dobra o tempo de espera no próximo retry
+                    continue
+                raise api_err
+
+    except errors.APIError as e:
+        if e.code == 503:
+            return "⚠️ O servidor da IA está com alto volume de acessos no momento. Por favor, aguarde alguns segundos e tente novamente."
+        return f"Erro na API do Gemini ({e.code}): {e.message}"
 
     except Exception as e:
         return f"Ocorreu um erro ao processar sua solicitação: {str(e)}"
