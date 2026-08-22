@@ -33,7 +33,7 @@ def executar_agente(
     mensagem_usuario: str = ""
 ) -> str:
     """
-    Executa a chamada ao modelo Gemini aplicando o RAG estático, guardrails e retry para 503.
+    Executa a chamada ao modelo Gemini aplicando o RAG estático, guardrails e retry para 429/503.
     """
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
@@ -55,33 +55,38 @@ def executar_agente(
         
         client = genai.Client(api_key=api_key)
         
-        # Tentativas de reconexão em caso de sobrecarga (503 / 429)
+        # Tentativas de reconexão automática
         max_tentativas = 3
-        tempo_espera = 2  # segundos
-
+        
         for tentativa in range(1, max_tentativas + 1):
             try:
                 response = client.models.generate_content(
-    model="gemini-3.6-flash",
-    contents=prompt_usuario,
-    config={
-        "system_instruction": system_prompt_formatado,
-        "temperature": 0.2,
-    }
-)
+                    model="gemini-3.6-flash",
+                    contents=prompt_usuario,
+                    config={
+                        "system_instruction": system_prompt_formatado,
+                        "temperature": 0.2,
+                    }
+                )
                 return response.text
 
             except errors.APIError as api_err:
-                # Trata instabilidade temporária do servidor ou limite de requisições
-                if api_err.code in (503, 429) and tentativa < max_tentativas:
-                    time.sleep(tempo_espera)
-                    tempo_espera *= 2  # Dobra o tempo de espera no próximo retry
+                # Se bater no limite de requisições por minuto (429) ou sobrecarga (503), espera 15s antes de tentar novamente
+                if api_err.code in (429, 503) and tentativa < max_tentativas:
+                    time.sleep(15)
                     continue
                 raise api_err
 
     except errors.APIError as e:
+        if e.code == 429:
+            return (
+                "⏳ **Joaquim está temporariamente ocupado.**\n\n"
+                "Atingimos o limite de requisições por minuto da cota gratuita da API. "
+                "Aguarde cerca de 30 segundos e envie sua mensagem novamente."
+            )
         if e.code == 503:
-            return "⚠️ O servidor da IA está com alto volume de acessos no momento. Por favor, aguarde alguns segundos e tente novamente."
+            return "⚠️ O serviço está instável no momento. Aguarde alguns instantes e tente novamente."
+            
         return f"Erro na API do Gemini ({e.code}): {e.message}"
 
     except Exception as e:
